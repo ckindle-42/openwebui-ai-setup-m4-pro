@@ -34,6 +34,20 @@ And the model routing? You ask about a BigFix fixlet, it loads `bigfix-expert`. 
 
 ---
 
+## By the Numbers
+
+| | |
+|---|---|
+| **15** phases — fresh Mac to full running stack |
+| **15+** local LLM models, including custom domain-tuned Modelfiles |
+| **5** generation services — images, music, voice, documents, slides |
+| **8** MCP tools — web fetch, memory, filesystem, databases, git, reasoning |
+| **4** boot modes — pick your memory footprint |
+| **~55GB** RAM used at full — comfortably inside your 64GB |
+| **$0/month** in API costs after setup |
+
+---
+
 ## What You Need
 
 | Component | Requirement |
@@ -154,7 +168,7 @@ Three routing tiers, in priority order:
 2. Workspace lock — deterministic routing when you need it
 3. Regex keyword scoring — the automatic magic for generic `auto` requests
 
-Telemetry lives at `http://localhost:8080/router/telemetry` if you want to see what it's been doing.
+Want to know what the router has been doing? `http://localhost:8080/router/telemetry` shows every routing decision, rule hit, and model switch since the stack started.
 
 ---
 
@@ -182,6 +196,8 @@ Total idle memory for all of this: ~285MB. On 64GB, that's a rounding error.
 No subscriptions. No API keys for AI services. No telemetry to vendors. No model inference leaving the box. Your policy documents, your code, your voice samples, your findings database — none of it goes anywhere.
 
 This matters when you're working with compliance documentation, internal infrastructure details, or anything else that shouldn't touch a cloud provider's training pipeline.
+
+The cloud providers charge you a monthly fee and train on your data. This stack charges nothing and talks to nobody.
 
 ---
 
