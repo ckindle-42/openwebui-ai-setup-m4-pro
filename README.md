@@ -1,20 +1,40 @@
-# M4 Pro Local AI Stack
+# Your M4 Mini Pro is a Beast. Let's Prove It.
 
-**Complete enterprise-grade local AI infrastructure for Apple M4 Pro · 64GB Unified Memory · macOS Sequoia**
+> *"I have an M4 Mini Pro with 64GB of RAM. I want to use it for coding, image generation,
+> a RAG for policies and procedures, security research, Splunk queries, composing music,
+> voice cloning — is it so hard to have a setup guide that starts with a **freshly formatted
+> machine** and ends with a **beautiful URL-style interface** that can do ALL of that?
+> I'd even love it to dynamically select the correct model based on the task —
+> like the cloud providers do."*
 
-Single URL (`http://localhost:8080`) · Everything on-device · Zero cloud dependencies
-
----
-
-## What This Is
-
-A production-grade, 15-phase implementation guide for building a fully local AI platform on an Apple M4 Pro Mac Mini. The stack covers LLM inference and intelligent routing, image/audio/voice generation, document and presentation generation, retrieval-augmented generation (RAG), web content fetching, and a persistent MCP tool ecosystem — all running locally with no external API keys required.
-
-**This is a detailed implementation guide, not a download-and-run script.** Each phase is documented with complete configuration, code, and troubleshooting guidance. Phases are modular and can be deployed incrementally.
+It wasn't. Here's the guide.
 
 ---
 
-## System Requirements
+## What You're Building
+
+One URL. Everything on-device. Zero subscriptions. Zero API keys. Zero data leaving your machine.
+
+Type `http://localhost:8080` and you get a chat interface that:
+
+- **Writes and reviews your code** — PowerShell, Python, BigFix fixlets — and automatically loads the right model for the job
+- **Answers Splunk SPL questions** from a model trained for SIEM operations, then validates your queries against a live Splunk instance
+- **Searches your own policy and procedure documents** with RAG so you can ask "what does our CIP-007 policy say about patch windows" and get a real answer
+- **Generates images** from text using FLUX.1-schnell running entirely on your M4's Neural Engine
+- **Composes music and beats** from a text prompt — genre, mood, BPM — rendered locally with AudioCraft
+- **Clones any voice** and synthesizes new speech in it, in 14 languages, without phoning home to ElevenLabs
+- **Fetches live web content** — API docs, vendor portals, JS-rendered sites, even Cloudflare-protected pages — directly into your chat window
+- **Remembers things across sessions** via a persistent knowledge graph so you don't re-explain your infrastructure every Monday morning
+- **Generates audit-ready documents** with proper metadata, watermarks, and PDF/A-2b archival compliance
+- **Builds slide decks** from a prompt and spits out a PPTX you can actually send to people
+
+And the model routing? You ask about a BigFix fixlet, it loads `bigfix-expert`. You paste a Splunk query, it switches to `splunk-secops`. You say "write me a Python script," it routes to `qwen3:32b`. You don't pick the model. You just work.
+
+**This is a step-by-step implementation guide** — 15 phases, starting from a freshly formatted Mac, ending with that URL. Every phase has full configuration, working code, and troubleshooting. Nothing is hand-wavy. You will have a running system.
+
+---
+
+## What You Need
 
 | Component | Requirement |
 |-----------|-------------|
@@ -25,175 +45,161 @@ A production-grade, 15-phase implementation guide for building a fully local AI 
 | Python | 3.11 (global virtual environment) |
 | Container runtime | Docker Desktop |
 
-> **Memory note:** `full` mode uses ~55GB. `core` mode uses ~28GB. `minimal` mode uses ~24GB. See [Launcher Modes](#launcher-modes) below.
+> **On memory:** The full stack runs at ~55GB. A lighter `core` mode sits at ~28GB. A `minimal` mode (Ollama + Router + Caddy, no Docker) needs ~24GB. You have options — but you have 64GB, so run `full`.
 
 ---
 
-## Documentation
+## Start Here
 
-| Document | Version | Description |
-|----------|---------|-------------|
-| [M4 AI Stack Setup Guide](docs/M4_AI_Stack_Setup_Guide_v6.2.md) | v6.2 | Main 15-phase implementation guide (4,400+ lines) — start here |
-| [MCP Core Servers](docs/MCP_mcpo_Core_Servers_v1.4.md) | v1.4 | Phase 15 companion: mcpo proxy + Filesystem, Memory, SQLite, Git, Sequential Thinking, and Time servers |
-| [MCP Evaluation Roadmap](docs/MCP_Evaluation_Roadmap_v1.2.md) | v1.2 | Phase 15 companion: evaluation of 500+ MCP servers filtered for this stack with prioritized rollout order |
-| [MCP Scrapling](docs/MCP_Scrapling_v1.3.md) | v1.3 | Phase 15 companion: intelligent web content fetching with three-tier anti-bot escalation |
+| Document | What It Covers |
+|----------|----------------|
+| [**Setup Guide v6.2**](docs/M4_AI_Stack_Setup_Guide_v6.2.md) | All 15 phases from fresh format to running stack — 4,400+ lines, every command, every config |
+| [**MCP Core Servers v1.4**](docs/MCP_mcpo_Core_Servers_v1.4.md) | Phase 15: the persistent tool layer — file access, memory, databases, git, structured reasoning, time |
+| [**MCP Evaluation Roadmap v1.2**](docs/MCP_Evaluation_Roadmap_v1.2.md) | How 500+ MCP servers were filtered down to the ones that actually matter for this stack |
+| [**MCP Scrapling v1.3**](docs/MCP_Scrapling_v1.3.md) | Phase 15: live web fetching with anti-bot bypass — from static docs to Cloudflare-protected portals |
 
 ---
 
-## Architecture
+## How It's Laid Out
 
 ```
                         http://localhost:8080
                                  │
                         ┌────────▼────────┐
-                        │      Caddy      │  Reverse proxy + static file serving
-                        │     :8080       │  /images/ · /audio/ · /voice/ · /docs/ · /slides/
+                        │      Caddy      │  One URL to rule them all
+                        │     :8080       │  Routes everything · Serves all generated files
                         └────────┬────────┘
                ┌─────────────────┼─────────────────┐
                │                 │                 │
        ┌───────▼───────┐ ┌───────▼───────┐ ┌───────▼───────┐
        │   Open WebUI  │ │    Router     │ │   SearxNG     │
        │    :3000      │ │    :8000      │ │    :8888      │
-       │  Chat + RAG   │ │   FastAPI     │ │  Meta-search  │
+       │  Chat + RAG   │ │  Model Brain  │ │  Local Search │
        └───────┬───────┘ └───────┬───────┘ └───────────────┘
                │                 │
        ┌───────▼───────┐ ┌───────▼─────────────────────────┐
        │   ChromaDB    │ │   Ollama  :11434                 │
        │    :8500      │ │   15+ models · M4 MPS            │
-       │  Vector store │ │   Custom Modelfiles              │
+       │  Your Docs    │ │   Custom Modelfiles              │
        └───────────────┘ └──────────────────────────────────┘
 
-  Generation Services
+  Generation — ask for it, get a file, download link appears in chat
     ComfyUI         FLUX.1-schnell (~24GB)    ──►  ~/AI_Output/images/
     MusicGen        AudioCraft Large          ──►  ~/AI_Output/audio/
     Voice Clone     XTTS-v2 (~2GB)            ──►  ~/AI_Output/voice/
     DocGen :8002    Pandoc + Typst            ──►  ~/AI_Output/docs/
-    Presenton :5000 PPTX/PDF generator        ──►  ~/AI_Output/slides/
+    Presenton :5000 PPTX/PDF slides           ──►  ~/AI_Output/slides/
 
-  MCP Tool Layer  (~285MB total idle)
-    Scrapling  :8900   Web fetch (HTTP → Chromium → Stealth)
-    mcpo       :9000   Filesystem · Memory · SQLite · Git · Sequential Thinking · Time
-    MS Learn   remote  Official Microsoft documentation (zero local install)
+  MCP Tool Layer — live data, persistent memory, real files (~285MB idle)
+    Scrapling  :8900   Web fetch · HTTP → Chromium → Stealth bypass
+    mcpo       :9000   Filesystem · Memory · SQLite · Git · Reasoning · Time
+    MS Learn   remote  Official Microsoft docs · zero local install
 ```
 
 ---
 
-## Service Stack
+## The 15 Phases
 
-| Service | Port | Technology | Purpose |
-|---------|------|------------|---------|
-| Caddy | :8080 | Reverse proxy | Single entry URL, static file serving |
-| Open WebUI | :3000 | Docker | Chat interface with RAG |
-| Model Router | :8000 | FastAPI | Intelligent model routing |
-| Ollama | :11434 | Native | LLM inference (M4 MPS accelerated) |
-| ChromaDB | :8500 | Docker | Vector embeddings for RAG |
-| SearxNG | :8888 | Docker | Local meta-search (Brave, DuckDuckGo, Startpage) |
-| ComfyUI | — | Native | Image generation (FLUX.1-schnell) |
-| MusicGen | — | Native | Music generation (AudioCraft Large) |
-| Voice Clone | — | Native | Voice synthesis (Coqui XTTS-v2) |
-| DocGen | :8002 | FastAPI | Document generation (Pandoc + Typst) |
-| Presenton | :5000 | Docker | Presentation generation (PPTX/PDF) |
-| Scrapling | :8900 | MCP/HTTP | Web content fetching |
-| mcpo proxy | :9000 | MCP/OpenAPI | Tool proxy for 6 MCP servers |
-
----
-
-## Implementation Phases
-
-| Phase | Name | Key Output |
-|-------|------|------------|
-| 1 | PyTorch Base Matrix | Global ML venv · M4 MPS enabled |
-| 2 | Ollama + Models | 15+ LLMs · Custom Modelfiles (bigfix-expert, splunk-secops) |
-| 3 | Caddy HTTP Router | Single `:8080` entry URL · Static file routing |
-| 4 | Docker Stack | Open WebUI · ChromaDB · SearxNG |
-| 5 | Model Router | Virtual workspace models · Regex routing · Telemetry dashboard |
-| 6 | ComfyUI | FLUX.1-schnell image generation · M4 MPS |
-| 7 | MusicGen | AudioCraft Large · Lazy-load architecture |
-| 8 | Voice Clone | XTTS-v2 · 14 languages · Speaker embedding cache |
-| 9 | Open WebUI Tools | Music · Voice · SPL Validator · Presentation tools |
-| 10 | Policy & Procedure RAG | ChromaDB document upload · `#CollectionName` references |
-| 11 | Document Generation | DocGen API · Pandoc + Typst · NERC CIP metadata · Presenton |
-| 12 | Master Launcher | `launch_ai_stack.sh` · Four modes · Watchdog · LaunchAgent |
-| 13 | Smoke Test Suite | End-to-end verification of all services and routing logic |
-| 14 | Personal Mode (Optional) | Uncensored workspaces · NSFW image checkpoints |
-| 15 | MCP Server Framework | Scrapling · mcpo proxy · 6 MCP servers · Microsoft Learn |
+| Phase | What Happens |
+|-------|-------------|
+| 1 | PyTorch foundation — global ML venv, M4 MPS acceleration enabled |
+| 2 | Ollama + 15+ models — including custom `bigfix-expert` and `splunk-secops` Modelfiles |
+| 3 | Caddy — the front door, one URL for everything |
+| 4 | Docker stack — Open WebUI, ChromaDB (your vector store), SearxNG (local search) |
+| 5 | Model Router — the brain that picks the right model so you don't have to |
+| 6 | ComfyUI — FLUX.1-schnell image generation, full M4 MPS |
+| 7 | MusicGen — AudioCraft Large, lazy-load so startup stays fast |
+| 8 | Voice Clone — XTTS-v2, 14 languages, speaker embedding cache |
+| 9 | Open WebUI Tools — wires generation services into the chat interface |
+| 10 | Policy & Procedure RAG — upload docs, query them with `#CollectionName` |
+| 11 | Document Generation — Pandoc + Typst, NERC CIP metadata, Presenton slides |
+| 12 | Master Launcher — one script, four modes, watchdog, boots at login |
+| 13 | Smoke Test Suite — automated end-to-end verification of every service |
+| 14 | Personal Mode *(optional)* — uncensored workspaces for red team, creative work |
+| 15 | MCP Servers — live web access, persistent memory, file tools, structured reasoning |
 
 ---
 
-## Launcher Modes
+## Boot It Up
 
-The `launch_ai_stack.sh` script (Phase 12) supports four operating modes:
+One script. Four modes. Pick based on how much of the stack you want running:
 
-| Mode | Approx. Memory | Includes |
-|------|---------------|----------|
-| `full` | ~55GB | All services including generation models |
-| `core` | ~28GB | Router + WebUI + Docker stack |
-| `minimal` | ~24GB | Ollama + Router + Caddy only (no Docker) |
-| `personal` | ~40GB | Full stack + Phase 14 uncensored models |
+```bash
+./launch_ai_stack.sh full      # ~55GB — everything including generation models
+./launch_ai_stack.sh core      # ~28GB — chat, routing, RAG, search
+./launch_ai_stack.sh minimal   # ~24GB — Ollama + Router + Caddy, no Docker
+./launch_ai_stack.sh personal  # ~40GB — full stack + Phase 14 uncensored workspaces
+```
 
----
-
-## Model Routing
-
-The Phase 5 Model Router exposes virtual workspace models that route to specialized backends based on three precedence tiers: `@model:name` prompt override → workspace lock → regex keyword scoring.
-
-| Virtual Model | Backend | Primary Use Case |
-|--------------|---------|-----------------|
-| `auto` | Dynamic (regex) | General routing based on prompt content |
-| `auto-bigfix` | `bigfix-expert` Modelfile | BigFix fixlets, endpoint compliance |
-| `auto-splunk` | `splunk-secops` Modelfile | Splunk SPL, SIEM operations |
-| `auto-coding` | `qwen3:32b` | Code review, scripting |
-| `auto-reasoning` | `deepseek-r1:32b` | Analysis, research |
-| `auto-slides` | `qwen3:32b` + Presenton | Presentation generation |
-| `auto-docs` | `qwen3:32b` + DocGen | Document generation |
-| `auto-rag` | `qwen3:32b` + ChromaDB | Policy and procedure retrieval |
-
-Routing telemetry is available at `http://localhost:8080/router/telemetry`.
+The script manages startup order, warm-caches fast models, runs a watchdog on the router, and integrates with macOS LaunchAgent so it starts automatically at login.
 
 ---
 
-## MCP Tool Ecosystem
+## The Model Router — This Is the Fun Part
 
-Phase 15 adds 8 AI tools via the Model Context Protocol (~285MB total idle memory):
+The whole point was "dynamically select the correct model like cloud providers do." Here's what that looks like:
 
-| Tool | Endpoint | Transport | Purpose |
-|------|----------|-----------|---------|
-| Scrapling | `:8900` | Native HTTP/SSE | Web fetching — three tiers: fast HTTP → Chromium → Stealth |
-| Filesystem | via mcpo `:9000` | stdio → OpenAPI | Read/write/search local files and directories |
-| Memory | via mcpo `:9000` | stdio → OpenAPI | Persistent knowledge graph across sessions |
-| SQLite | via mcpo `:9000` | stdio → OpenAPI | Query local databases from chat |
-| Git | via mcpo `:9000` | stdio → OpenAPI | Repo inspection, diffs, code review |
-| Sequential Thinking | via mcpo `:9000` | stdio → OpenAPI | Structured step-by-step reasoning |
-| Time | via mcpo `:9000` | stdio → OpenAPI | Timezone conversions and date math |
-| Microsoft Learn | Remote | Streamable HTTP | Official Microsoft documentation (zero local install) |
+| You say... | Router loads... | Why |
+|-----------|----------------|-----|
+| Anything about BigFix, fixlets, baselines | `bigfix-expert` | Keyword scoring hit |
+| Splunk SPL, search queries, SIEM | `splunk-secops` | Keyword scoring hit |
+| Write me a Python/PowerShell script | `qwen3:32b` | Coding intent detected |
+| Analyze this, research that | `deepseek-r1:32b` | Reasoning intent detected |
+| Make me a slide deck | `qwen3:32b` + Presenton | `auto-slides` workspace |
+| Generate a compliance doc | `qwen3:32b` + DocGen | `auto-docs` workspace |
+| What does our policy say about... | `qwen3:32b` + ChromaDB | `auto-rag` workspace |
 
-All MCP servers connect to Open WebUI via two connections: Scrapling (native HTTP) and mcpo proxy (OpenAPI). Servers are configured in `~/mcp_servers.json` and started via `~/launch_mcpo.sh`.
+Three routing tiers, in priority order:
+1. `@model:name` anywhere in your prompt — manual override, always wins
+2. Workspace lock — deterministic routing when you need it
+3. Regex keyword scoring — the automatic magic for generic `auto` requests
+
+Telemetry lives at `http://localhost:8080/router/telemetry` if you want to see what it's been doing.
 
 ---
 
-## Key Design Principles
+## The MCP Layer — Your AI Has Tools Now
 
-- **Local-first:** No cloud dependencies. Every model and service runs on-device.
-- **Modular:** Each phase is independent. Deploy only what you need with the launcher mode flags.
-- **Privacy-preserving:** No external API keys required for core operation. No data leaves the machine.
-- **Compliance-oriented:** NERC CIP audit metadata, PDF/A-2b archival format, deterministic audit filenames.
-- **Hardware-optimized:** Explicit M4 Pro MPS acceleration, VRAM management, model swap and OOM fallback chains.
-- **Self-contained documentation:** Each major subsystem has a dedicated companion document to keep the main guide navigable.
+Phase 15 wires in 8 tools via the Model Context Protocol. The AI can now act on live data, not just text in its context window:
+
+| Tool | What It Actually Does |
+|------|-----------------------|
+| **Scrapling** | Fetches live web pages — including JS-rendered sites and anti-bot-protected portals — directly into the conversation |
+| **Filesystem** | Reads and writes your actual local files. Ask it to update a script, it updates the script. |
+| **Memory** | Persistent knowledge graph that survives reboots. Stop re-explaining your infrastructure. |
+| **SQLite** | Query your local databases from chat. Ask "how many open findings from Q4" and get a number. |
+| **Git** | Inspect repos, read diffs, review commit history — without copy-pasting anything |
+| **Sequential Thinking** | Structured step-by-step reasoning with revision — useful for audit prep and incident analysis |
+| **Time** | Timezone math across your regions. Useful when you're coordinating across TX/NY/CA. |
+| **Microsoft Learn** | Grounds responses in official MS documentation for Windows Server, AD, SQL Server. Zero local install. |
+
+Total idle memory for all of this: ~285MB. On 64GB, that's a rounding error.
+
+---
+
+## Everything Stays on Your Machine
+
+No subscriptions. No API keys for AI services. No telemetry to vendors. No model inference leaving the box. Your policy documents, your code, your voice samples, your findings database — none of it goes anywhere.
+
+This matters when you're working with compliance documentation, internal infrastructure details, or anything else that shouldn't touch a cloud provider's training pipeline.
 
 ---
 
 ## Versioning
 
-The main guide uses semantic versioning. The changelog at the top of [M4_AI_Stack_Setup_Guide_v6.2.md](docs/M4_AI_Stack_Setup_Guide_v6.2.md) documents every change, fix, and breaking change across versions.
-
 Current versions:
-- Main guide: **v6.2** (Feb 2026) — Hardening update
-- MCP Core Servers: **v1.4**
-- MCP Scrapling: **v1.3**
-- MCP Evaluation Roadmap: **v1.2**
+
+| Document | Version | Update |
+|----------|---------|--------|
+| Main Setup Guide | **v6.2** | Feb 2026 — Hardening pass, critical bug fixes |
+| MCP Core Servers | **v1.4** | Feb 2026 |
+| MCP Scrapling | **v1.3** | Feb 2026 |
+| MCP Evaluation Roadmap | **v1.2** | Feb 2026 |
+
+Every change, fix, and breaking change is logged in the changelog at the top of the [Setup Guide](docs/M4_AI_Stack_Setup_Guide_v6.2.md).
 
 ---
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE). Build on it, adapt it, share it.
